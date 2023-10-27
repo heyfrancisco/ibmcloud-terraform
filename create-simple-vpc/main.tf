@@ -1,30 +1,50 @@
-provider "ibm" {
-  generation = 2
+##############################################################################
+# Resource Group
+##############################################################################
+
+module "resource_group" {
+  source  = "terraform-ibm-modules/resource-group/ibm"
+  version = "1.1.0"
+  # if an existing resource group is not set (null) create a new one using prefix
+  resource_group_name          = var.resource_group == null ? "${var.prefix}-resource-group" : null
+  existing_resource_group_name = var.resource_group
 }
 
-resource "ibm_is_vpc" "vpc" {
-  name           = var.vpc_name
-  resource_group = var.resource_group
-}
+#############################################################################
+# Provision VPC
+#############################################################################
 
-resource "ibm_is_subnet" "subnet_01" {
-  name                     = "sn-01-madrid"
-  vpc                      = ibm_is_vpc.vpc.id
-  zone                     = "eu-es-1"
-  total_ipv4_address_count = 256
+module "slz_vpc" {
+  source            = "../../"
+  resource_group_id = module.resource_group.resource_group_id
+  region            = var.region
+  name              = var.name
+  prefix            = var.prefix
+  tags              = var.resource_tags
+  subnets = {
+    zone-1 = [
+      {
+        name           = "subnet-a"
+        cidr           = "10.10.10.0/24"
+        public_gateway = true
+        acl_name       = "vpc-acl"
+      }
+    ],
+    zone-2 = [
+      {
+        name           = "subnet-b"
+        cidr           = "10.20.10.0/24"
+        public_gateway = false
+        acl_name       = "vpc-acl"
+      }
+    ],
+    zone-3 = [
+      {
+        name           = "subnet-c"
+        cidr           = "10.30.10.0/24"
+        public_gateway = false
+        acl_name       = "vpc-acl"
+      }
+    ]
+  }
 }
-
-resource "ibm_is_subnet" "subnet_02" {
-  name                     = "sn-02-madrid"
-  vpc                      = ibm_is_vpc.vpc.id
-  zone                     = "eu-es-2"
-  total_ipv4_address_count = 256
-}
-
-resource "ibm_is_subnet" "subnet_03" {
-  name                     = "sn-03-madrid"
-  vpc                      = ibm_is_vpc.vpc.id
-  zone                     = "eu-es-3"
-  total_ipv4_address_count = 256
-}
-
